@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Journal Genius — Accounting Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #2a2a3a;
+    --dr: #00d4aa;
+    --cr: #ff6b6b;
+    --gold: #ffd166;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --card: #1a1a26;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Space Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .screen {
+    display: none;
+    width: 480px;
+    animation: fadeIn 0.3s ease;
+  }
+  .screen.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── INTRO SCREEN ── */
+  #introScreen {
+    text-align: center;
+    padding: 40px 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+
+  .logo-tag {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    color: var(--dr);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  h1.game-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--text) 0%, var(--muted) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 36px;
+  }
+
+  .rules-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 20px;
+    text-align: left;
+    margin-bottom: 28px;
+  }
+
+  .rules-box h3 {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .rule {
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .rule-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .name-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus { border-color: var(--dr); }
+  input[type="text"]::placeholder { color: var(--muted); }
+
+  .btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--dr);
+    color: var(--bg);
+    width: 100%;
+  }
+  .btn-primary:hover { background: #00f0c0; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-sm {
+    padding: 10px 20px;
+    font-size: 11px;
+  }
+
+  /* ── GAME SCREEN ── */
+  #gameScreen {
+    width: 480px;
+  }
+
+  .game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 2px 2px 0 0;
+  }
+
+  .level-tag {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .score-display {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--gold);
+  }
+
+  .player-tag {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .drop-arena {
+    position: relative;
+    height: 340px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  /* Debit / Credit zones */
+  .zone-label {
+    position: absolute;
+    bottom: 16px;
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    opacity: 0.06;
+    pointer-events: none;
+    user-select: none;
+  }
+  .zone-label.dr { left: 20px; color: var(--dr); }
+  .zone-label.cr { right: 20px; color: var(--cr); }
+
+  .center-divider {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--border);
+    opacity: 0.5;
+  }
+
+  .falling-card {
+    position: absolute;
+    width: 160px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--dr);
+    border-radius: 2px;
+    left: calc(50% - 80px);
+    top: -80px;
+    transition: left 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 10;
+    box-shadow: 0 0 20px rgba(0,212,170,0.15);
+  }
+
+  .falling-card .acct-name {
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .falling-card .acct-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .falling-card.moved-left {
+    border-color: var(--dr);
+    box-shadow: 0 0 24px rgba(0,212,170,0.3);
+  }
+
+  .falling-card.moved-right {
+    border-color: var(--cr);
+    box-shadow: 0 0 24px rgba(255,107,107,0.3);
+  }
+
+  /* Feedback flash */
+  .arena-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .arena-flash.correct { background: rgba(0,212,170,0.08); }
+  .arena-flash.wrong   { background: rgba(255,107,107,0.08); }
+  .arena-flash.show    { opacity: 1; }
+
+  /* Progress bar */
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--dr);
+    transition: width 0.4s ease;
+  }
+
+  /* Controls row */
+  .controls-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .ctrl-btn {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    padding: 18px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  #drBtn {
+    background: rgba(0,212,170,0.08);
+    color: var(--dr);
+    border-radius: 0 0 0 2px;
+  }
+  #drBtn:hover { background: rgba(0,212,170,0.18); }
+  #drBtn:active { background: rgba(0,212,170,0.3); transform: scale(0.98); }
+
+  #crBtn {
+    background: rgba(255,107,107,0.08);
+    color: var(--cr);
+    border-radius: 0 0 2px 0;
+  }
+  #crBtn:hover { background: rgba(255,107,107,0.18); }
+  #crBtn:active { background: rgba(255,107,107,0.3); transform: scale(0.98); }
+
+  /* Balances footer */
+  .balance-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 2px 2px;
+  }
+
+  .balance-cell {
+    background: var(--surface);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .balance-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .balance-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  .balance-cell.dr-cell .balance-value { color: var(--dr); }
+  .balance-cell.cr-cell .balance-value { color: var(--cr); }
+
+  /* Queue preview */
+  .queue-strip {
+    padding: 10px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-bottom: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  .queue-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .queue-item {
+    font-size: 10px;
+    padding: 4px 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── RESULT SCREEN ── */
+  #resultScreen {
+    text-align: center;
+    padding: 40px 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+
+  .result-icon { font-size: 48px; margin-bottom: 16px; }
+
+  .result-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .result-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    margin-bottom: 24px;
+  }
+
+  .stat-cell {
+    background: var(--card);
+    padding: 16px;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-secondary {
+    flex: 1;
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--text); }
+
+  /* ── LEADERBOARD SCREEN ── */
+  #leaderboardScreen {
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+
+  .lb-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .lb-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+  }
+
+  .lb-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+  }
+
+  .lb-table th {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .lb-table td {
+    padding: 12px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .lb-table tr:first-child td { color: var(--gold); }
+  .lb-table tr:nth-child(2) td { color: var(--muted); }
+
+  .rank-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    color: var(--muted);
+  }
+
+  .medal { margin-right: 6px; }
+
+  /* Keyboard hint */
+  .keyboard-hint {
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    padding: 8px;
+    letter-spacing: 1px;
+  }
+
+  kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── INTRO SCREEN ── -->
+<div id="introScreen" class="screen active">
+  <div class="logo-tag">Accounting Game</div>
+  <h1 class="game-title">Journal<br>Genius</h1>
+  <div class="subtitle">DEBIT OR CREDIT? YOU DECIDE.</div>
+
+  <div class="rules-box">
+    <h3>How to Play</h3>
+    <div class="rule">
+      <div class="rule-dot" style="background:var(--dr)"></div>
+      Assets and Expenses increase on the <strong style="color:var(--dr)">Debit</strong> side
+    </div>
+    <div class="rule">
+      <div class="rule-dot" style="background:var(--cr)"></div>
+      Liabilities, Equity, Revenue increase on the <strong style="color:var(--cr)">Credit</strong> side
+    </div>
+    <div class="rule">
+      <div class="rule-dot" style="background:var(--gold)"></div>
+      Sort each falling entry correctly to score points
+    </div>
+    <div class="rule">
+      <div class="rule-dot" style="background:var(--muted)"></div>
+      Balanced books = level complete. 3 levels total.
+    </div>
+  </div>
+
+  <div class="name-row">
+    <input type="text" id="playerName" placeholder="Enter your name" maxlength="20" />
+  </div>
+  <button class="btn btn-primary" id="startButton">Start Game</button>
+</div>
+
+<!-- ── GAME SCREEN ── -->
+<div id="gameScreen" class="screen">
+  <div class="game-header">
+    <div class="level-tag">Level <span id="levelNum">1</span> / 3</div>
+    <div class="score-display">⭐ <span id="scoreDisplay">0</span></div>
+    <div class="player-tag" id="playerTag"></div>
+  </div>
+
+  <div class="queue-strip">
+    <div class="queue-label">Queue</div>
+    <div id="queueItems"></div>
+  </div>
+
+  <div class="drop-arena" id="dropArena">
+    <div class="arena-flash" id="arenaFlash"></div>
+    <div class="zone-label dr">DR</div>
+    <div class="zone-label cr">CR</div>
+    <div class="center-divider"></div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+  </div>
+
+  <div class="controls-row">
+    <button class="ctrl-btn" id="drBtn">← DR</button>
+    <button class="ctrl-btn" id="crBtn">CR →</button>
+  </div>
+
+  <div class="balance-footer">
+    <div class="balance-cell dr-cell">
+      <span class="balance-label">Debit Total</span>
+      <span class="balance-value" id="drTotal">0</span>
+    </div>
+    <div class="balance-cell cr-cell">
+      <span class="balance-label">Credit Total</span>
+      <span class="balance-value" id="crTotal">0</span>
+    </div>
+  </div>
+
+  <div class="keyboard-hint">
+    <kbd>←</kbd> Debit &nbsp;&nbsp; <kbd>→</kbd> Credit
+  </div>
+</div>
+
+<!-- ── RESULT SCREEN ── -->
+<div id="resultScreen" class="screen">
+  <div class="result-icon" id="resultIcon">🎉</div>
+  <div class="result-title" id="resultTitle">Level Complete!</div>
+  <div class="result-subtitle" id="resultSubtitle">Books are balanced.</div>
+
+  <div class="stats-grid">
+    <div class="stat-cell">
+      <div class="stat-label">Score</div>
+      <div class="stat-value" id="resultScore">0</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Correct</div>
+      <div class="stat-value" id="resultCorrect">0/0</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Level</div>
+      <div class="stat-value" id="resultLevel">1</div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary btn-sm" id="retryButton">↺ Retry</button>
+    <button class="btn btn-primary btn-sm" id="nextButton">Next Level →</button>
+  </div>
+</div>
+
+<!-- ── LEADERBOARD SCREEN ── -->
+<div id="leaderboardScreen" class="screen">
+  <div class="lb-header">
+    <div class="lb-title">Leaderboard</div>
+    <button class="btn btn-secondary btn-sm" id="playAgainBtn">Play Again</button>
+  </div>
+  <table class="lb-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Player</th>
+        <th>Score</th>
+        <th>Accuracy</th>
+      </tr>
+    </thead>
+    <tbody id="lbBody"></tbody>
+  </table>
+</div>
+
+<script>
+// ── DATA ──
+const ACCOUNTS = [
+  // [name, normalBalance, type]
+  ['Cash',               'Dr', 'Asset'],
+  ['Accounts Receivable','Dr', 'Asset'],
+  ['Inventory',          'Dr', 'Asset'],
+  ['Prepaid Expenses',   'Dr', 'Asset'],
+  ['Equipment',          'Dr', 'Asset'],
+  ['Buildings',          'Dr', 'Asset'],
+  ['Land',               'Dr', 'Asset'],
+  ['Supplies',           'Dr', 'Asset'],
+  ['Rent Expense',       'Dr', 'Expense'],
+  ['Wages Expense',      'Dr', 'Expense'],
+  ['Interest Expense',   'Dr', 'Expense'],
+  ['Depreciation Exp.',  'Dr', 'Expense'],
+  ['Accounts Payable',   'Cr', 'Liability'],
+  ['Notes Payable',      'Cr', 'Liability'],
+  ['Unearned Revenue',   'Cr', 'Liability'],
+  ['Accrued Liabilities','Cr', 'Liability'],
+  ['Bonds Payable',      'Cr', 'Liability'],
+  ['Common Stock',       'Cr', 'Equity'],
+  ['Retained Earnings',  'Cr', 'Equity'],
+  ['Sales Revenue',      'Cr', 'Revenue'],
+  ['Service Revenue',    'Cr', 'Revenue'],
+  ['Interest Income',    'Cr', 'Revenue'],
+];
+
+const LEVEL_CONFIG = {
+  1: { count: 4,  drop: 3500, label: 'Beginner' },
+  2: { count: 6,  drop: 2800, label: 'Intermediate' },
+  3: { count: 8,  drop: 2200, label: 'Advanced' },
+};
+
+// ── STATE ──
+let state = {
+  screen: 'intro',
+  playerName: '',
+  level: 1,
+  score: 0,
+  totalCorrect: 0,
+  totalAnswered: 0,
+  queue: [],
+  current: null,
+  dropTimeout: null,
+  answered: false,
+  leaderboard: JSON.parse(localStorage.getItem('jg_lb') || '[]'),
+};
+
+// ── DOM ──
+const $ = id => document.getElementById(id);
+const screens = { intro: $('introScreen'), game: $('gameScreen'), result: $('resultScreen'), lb: $('leaderboardScreen') };
+
+function showScreen(name) {
+  Object.entries(screens).forEach(([k, el]) => el.classList.toggle('active', k === name));
+  state.screen = name;
+}
+
+// ── INIT ──
+$('startButton').addEventListener('click', () => {
+  const name = $('playerName').value.trim() || 'Player';
+  state.playerName = name;
+  state.score = 0;
+  state.level = 1;
+  state.totalCorrect = 0;
+  state.totalAnswered = 0;
+  $('playerTag').textContent = name;
+  startLevel();
+});
+
+$('playerName').addEventListener('keydown', e => { if (e.key === 'Enter') $('startButton').click(); });
+
+$('drBtn').addEventListener('click', () => answer('Dr'));
+$('crBtn').addEventListener('click', () => answer('Cr'));
+$('retryButton').addEventListener('click', () => { state.score = 0; state.totalCorrect = 0; state.totalAnswered = 0; startLevel(); });
+$('nextButton').addEventListener('click', () => { state.level++; startLevel(); });
+$('playAgainBtn').addEventListener('click', () => { state.level = 1; state.score = 0; state.totalCorrect = 0; state.totalAnswered = 0; showScreen('intro'); });
+
+document.addEventListener('keydown', e => {
+  if (state.screen !== 'game') return;
+  if (e.key === 'ArrowLeft')  answer('Dr');
+  if (e.key === 'ArrowRight') answer('Cr');
+});
+
+// ── GAME LOGIC ──
+function startLevel() {
+  const cfg = LEVEL_CONFIG[state.level];
+  // Build a balanced queue: pairs where one Dr-account and one Cr-account share the same amount
+  const drAccounts = ACCOUNTS.filter(a => a[1] === 'Dr');
+  const crAccounts = ACCOUNTS.filter(a => a[1] === 'Cr');
+
+  state.queue = [];
+  for (let i = 0; i < cfg.count; i++) {
+    const amount = Math.floor(Math.random() * 9) * 1000 + 1000; // £1k–£9k steps
+    const drAcc = drAccounts[Math.floor(Math.random() * drAccounts.length)];
+    const crAcc = crAccounts[Math.floor(Math.random() * crAccounts.length)];
+    state.queue.push({ account: drAcc[0], normal: 'Dr', type: drAcc[2], amount });
+    state.queue.push({ account: crAcc[0], normal: 'Cr', type: crAcc[2], amount });
+  }
+
+  // Shuffle
+  for (let i = state.queue.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [state.queue[i], state.queue[j]] = [state.queue[j], state.queue[i]];
+  }
+
+  $('levelNum').textContent = state.level;
+  $('scoreDisplay').textContent = state.score;
+  updateBalanceTotals();
+  showScreen('game');
+  nextEntry();
+}
+
+function updateBalanceTotals() {
+  // These are just cosmetic - show current running totals of what's been placed
+  $('drTotal').textContent = '—';
+  $('crTotal').textContent = '—';
+}
+
+function updateQueuePreview() {
+  const strip = $('queueItems');
+  strip.innerHTML = '';
+  state.queue.slice(0, 4).forEach((entry, i) => {
+    const item = document.createElement('div');
+    item.className = 'queue-item';
+    item.textContent = entry.account;
+    if (i === 0) item.style.opacity = '0.3';
+    strip.appendChild(item);
+  });
+}
+
+function nextEntry() {
+  if (state.queue.length === 0) {
+    endLevel();
+    return;
+  }
+
+  updateQueuePreview();
+  state.current = state.queue.shift();
+  state.answered = false;
+
+  const cfg = LEVEL_CONFIG[state.level];
+  const total = cfg.count * 2;
+  const done = state.totalAnswered;
+  $('progressFill').style.width = ((done / total) * 100) + '%';
+
+  // Create falling card
+  const arena = $('dropArena');
+  const old = arena.querySelector('.falling-card');
+  if (old) arena.removeChild(old);
+
+  const card = document.createElement('div');
+  card.className = 'falling-card';
+  card.innerHTML = `
+    <div class="acct-name">${state.current.type}</div>
+    <div class="acct-value">${state.current.account}</div>
+    <div class="acct-name" style="margin-top:4px;font-size:13px;color:var(--text)">£${state.current.amount.toLocaleString()}</div>
+  `;
+  arena.appendChild(card);
+
+  // Animate drop
+  const arenaH = arena.clientHeight;
+  card.style.top = '-80px';
+
+  requestAnimationFrame(() => {
+    card.style.transition = `top ${cfg.drop}ms linear`;
+    card.style.top = (arenaH - 80) + 'px';
+  });
+
+  // Auto-miss if no answer
+  state.dropTimeout = setTimeout(() => {
+    if (!state.answered) {
+      flashArena('wrong');
+      removeCard();
+      state.totalAnswered++;
+      setTimeout(nextEntry, 400);
+    }
+  }, cfg.drop + 200);
+}
+
+function answer(side) {
+  if (!state.current || state.answered) return;
+  state.answered = true;
+  clearTimeout(state.dropTimeout);
+
+  const correct = side === state.current.normal;
+  const card = $('dropArena').querySelector('.falling-card');
+
+  if (card) {
+    card.style.transition = 'left 0.25s cubic-bezier(0.34,1.56,0.64,1), top 0.4s ease';
+    if (side === 'Dr') {
+      card.classList.add('moved-left');
+      card.style.left = '10px';
+    } else {
+      card.classList.add('moved-right');
+      card.style.left = 'calc(100% - 170px)';
+    }
+    card.style.top = ($('dropArena').clientHeight - 90) + 'px';
+  }
+
+  if (correct) {
+    state.score += 100 + (state.level * 50);
+    state.totalCorrect++;
+    flashArena('correct');
+  } else {
+    flashArena('wrong');
+  }
+
+  state.totalAnswered++;
+  $('scoreDisplay').textContent = state.score;
+
+  setTimeout(() => {
+    removeCard();
+    setTimeout(nextEntry, 200);
+  }, 500);
+}
+
+function removeCard() {
+  const card = $('dropArena').querySelector('.falling-card');
+  if (card) card.remove();
+}
+
+function flashArena(type) {
+  const flash = $('arenaFlash');
+  flash.className = `arena-flash ${type} show`;
+  setTimeout(() => flash.classList.remove('show'), 200);
+}
+
+function endLevel() {
+  $('progressFill').style.width = '100%';
+  const cfg = LEVEL_CONFIG[state.level];
+  const total = cfg.count * 2;
+  const accuracy = Math.round((state.totalCorrect / Math.max(state.totalAnswered, 1)) * 100);
+
+  $('resultScore').textContent = state.score;
+  $('resultCorrect').textContent = `${state.totalCorrect}/${state.totalAnswered}`;
+  $('resultLevel').textContent = state.level;
+
+  if (state.level >= 3) {
+    $('resultIcon').textContent = '🏆';
+    $('resultTitle').textContent = 'Game Complete!';
+    $('resultSubtitle').textContent = `Final Score: ${state.score} — ${accuracy}% accuracy`;
+    $('nextButton').style.display = 'none';
+    $('retryButton').style.display = 'none';
+
+    // Save to leaderboard
+    state.leaderboard.push({ name: state.playerName, score: state.score, accuracy });
+    state.leaderboard.sort((a, b) => b.score - a.score);
+    state.leaderboard = state.leaderboard.slice(0, 10);
+    localStorage.setItem('jg_lb', JSON.stringify(state.leaderboard));
+
+    // Render leaderboard
+    const medals = ['🥇', '🥈', '🥉'];
+    $('lbBody').innerHTML = state.leaderboard.map((entry, i) => `
+      <tr>
+        <td class="rank-num">${medals[i] || (i + 1)}</td>
+        <td>${entry.name}</td>
+        <td style="color:var(--gold);font-family:'Syne',sans-serif;font-weight:800">${entry.score}</td>
+        <td style="color:var(--muted)">${entry.accuracy}%</td>
+      </tr>
+    `).join('');
+
+    setTimeout(() => showScreen('result'), 100);
+    setTimeout(() => showScreen('lb'), 3500);
+  } else {
+    $('resultIcon').textContent = accuracy >= 70 ? '✅' : '📊';
+    $('resultTitle').textContent = accuracy >= 70 ? 'Level Cleared!' : 'Level Done';
+    $('resultSubtitle').textContent = `${accuracy}% accuracy — ${cfg.label} complete`;
+    $('nextButton').style.display = '';
+    $('retryButton').style.display = '';
+    showScreen('result');
+  }
+}
+</script>
+</body>
+</html>
